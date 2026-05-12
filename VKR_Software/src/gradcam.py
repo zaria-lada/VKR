@@ -1,4 +1,3 @@
-# src/gradcam.py
 import os
 import cv2
 import numpy as np
@@ -7,7 +6,6 @@ import torch.nn as nn
 from torchvision import models, transforms
 import matplotlib.pyplot as plt
 
-# 🔧 Пути
 def find_project_root():
     current = os.path.dirname(os.path.abspath(__file__))
     while True:
@@ -76,8 +74,8 @@ class EfficientNetCBAM_GradCAM(nn.Module):
         
     def forward(self, x):
         x = self.features(x)
-        self.activations = x.clone().detach()  # Сохраняем для Grad-CAM
-        x.register_hook(self.save_gradient)     # Хук для градиентов
+        self.activations = x.clone().detach() 
+        x.register_hook(self.save_gradient)  
         x = self.cbam(x)
         x = self.avgpool(x)
         return self.classifier(x)
@@ -106,14 +104,14 @@ def apply_gradcam(model, img_tensor, target_class=1):
     loss.backward()
     
     # Получаем веса и активации
-    weights = model.get_cam_weights()  # [1, 1792, 1, 1]
-    activations = model.activations    # [1, 1792, 7, 7]
+    weights = model.get_cam_weights()  
+    activations = model.activations    
     
     # Вычисляем карту внимания
-    cam = torch.sum(weights * activations, dim=1, keepdim=True)  # [1, 1, 7, 7]
-    cam = torch.relu(cam)  # ReLU для позитивных вкладов
+    cam = torch.sum(weights * activations, dim=1, keepdim=True) 
+    cam = torch.relu(cam) 
     cam = cam - cam.min()
-    cam = cam / (cam.max() + 1e-8)  # Нормализация [0, 1]
+    cam = cam / (cam.max() + 1e-8) 
     
     # Апсемплинг до размера изображения
     cam = nn.functional.interpolate(cam, size=(224, 224), mode='bilinear', align_corners=False)
@@ -148,15 +146,12 @@ def visualize_gradcam(image_path, model):
     
     return img_resized, heatmap, overlay, prob
 
-# --- ГЛАВНЫЙ СКРИПТ ---
 def main():
-    print("🎨 Grad-CAM Визуализация")
     
     # Загрузка модели
     model = EfficientNetCBAM_GradCAM(num_classes=1).to(device)
     model.load_state_dict(torch.load(os.path.join(MODELS_DIR, 'final_model.pt'), 
                                      map_location=device, weights_only=True))
-    print("✅ Модель загружена")
     
     # Примеры для визуализации (возьми из test.csv)
     import pandas as pd
@@ -169,7 +164,7 @@ def main():
     
     samples = [(p, 'REAL') for p in real_samples] + [(p, 'FAKE') for p in fake_samples]
     
-    print(f"🖼️ Визуализация {len(samples)} изображений...")
+    print(f"Визуализация {len(samples)} изображений...")
     
     for i, (img_path, true_label) in enumerate(samples):
         try:
@@ -180,17 +175,15 @@ def main():
             filename = os.path.basename(img_path)
             save_path = os.path.join(RESULTS_DIR, f'gradcam_{i}_{true_label}_{filename}')
             
-            # Компоновка: оригинал | карта | результат
             combined = np.hstack([orig, heatmap, overlay])
             cv2.imwrite(save_path, cv2.cvtColor(combined, cv2.COLOR_RGB2BGR))
             
             print(f"  ✓ {true_label} → {pred_label} (prob={prob:.3f}) | {save_path}")
             
         except Exception as e:
-            print(f"  ⚠️ Ошибка с {img_path}: {e}")
+            print(f"  Ошибка с {img_path}: {e}")
     
-    print(f"\n✅ Grad-CAM визуализации сохранены в: {RESULTS_DIR}")
-    print("💡 Открой эти изображения для диплома — они покажут, что модель смотрит на артефакты!")
+    print(f"\n Grad-CAM визуализации сохранены в: {RESULTS_DIR}")
 
 if __name__ == "__main__":
     main()
