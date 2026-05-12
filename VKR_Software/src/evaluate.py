@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
 
-# 🔧 Автоматический поиск корня проекта
+#  Автоматический поиск корня проекта
 def find_project_root():
     current = os.path.dirname(os.path.abspath(__file__))
     while True:
@@ -38,13 +38,9 @@ RESULTS_DIR = os.path.join(PROJECT_ROOT, 'results')
 os.makedirs(os.path.join(RESULTS_DIR, 'metrics'), exist_ok=True)
 os.makedirs(os.path.join(RESULTS_DIR, 'predictions'), exist_ok=True)
 
-print(f"📂 Результаты будут сохранены в: {RESULTS_DIR}")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"🚀 Устройство: {device}")
 
-# ==========================================================
-# АРХИТЕКТУРА МОДЕЛИ (Такая же, как при обучении)
-# ==========================================================
+
 class ChannelAttention(nn.Module):
     def __init__(self, channels, ratio=8):
         super().__init__()
@@ -95,9 +91,6 @@ class EfficientNetCBAM(nn.Module):
         x = self.avgpool(x)
         return self.classifier(x)
 
-# ==========================================================
-# DATASET
-# ==========================================================
 class FaceDataset(Dataset):
     def __init__(self, csv_path, img_size=224):
         self.df = pd.read_csv(csv_path, encoding='utf-8-sig')
@@ -114,9 +107,6 @@ class FaceDataset(Dataset):
         if img.shape[2] == 4: img = img[:,:,:3]
         return self.transform(img), torch.tensor(row['label'], dtype=torch.float32), row['filename']
 
-# ==========================================================
-# ФУНКЦИИ ВИЗУАЛИЗАЦИИ ТАБЛИЦ (matplotlib)
-# ==========================================================
 def save_table_as_image(df, title, filename, col_colors=None):
     fig, ax = plt.subplots(figsize=(10, len(df)*0.5 + 1.5))
     ax.axis('tight')
@@ -142,39 +132,29 @@ def save_table_as_image(df, title, filename, col_colors=None):
     plt.savefig(os.path.join(RESULTS_DIR, 'metrics', filename), dpi=300, bbox_inches='tight')
     plt.close()
 
-# ==========================================================
-# ГЛАВНАЯ ФУНКЦИЯ ОЦЕНКИ
-# ==========================================================
 def evaluate_and_save():
-    print("\n" + "="*60)
-    print("🔬 ПОЛНАЯ ОЦЕНКА МОДЕЛИ")
-    print("="*60)
     
     # 1. Загрузка модели
-    print("\n📥 Загрузка модели...")
+    print("\n Загрузка модели...")
     model_path = os.path.join(MODELS_DIR, 'final_model.pt')
     if not os.path.exists(model_path):
-        print(f"❌ Модель не найдена: {model_path}")
+        print(f" Модель не найдена: {model_path}")
         return
     
     model = EfficientNetCBAM(num_classes=1).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     model.eval()
-    print(f"✅ Модель загружена")
+    print(f" Модель загружена")
     
     # 2. Загрузка данных
-    print("\n📥 Загрузка тестовых данных...")
     test_csv = os.path.join(SPLITS_DIR, 'test.csv')
     if not os.path.exists(test_csv):
-        print(f"❌ Тестовая выборка не найдена: {test_csv}")
         return
         
     test_ds = FaceDataset(test_csv)
     test_loader = DataLoader(test_ds, batch_size=16, shuffle=False, num_workers=0)
-    print(f"✅ Test dataset: {len(test_ds)} изображений")
     
     # 3. Инференс
-    print("\n🔮 Генерация предсказаний...")
     all_preds, all_probs, all_labels, all_filenames = [], [], [], []
     
     with torch.no_grad():
@@ -192,9 +172,6 @@ def evaluate_and_save():
     all_probs = np.array(all_probs)
     
     # 4. Расчёт метрик
-    print("\n📈 РАСЧЁТ МЕТРИК")
-    print("="*60)
-    
     acc = accuracy_score(all_labels, all_preds)
     prec = precision_score(all_labels, all_preds, zero_division=0)
     rec = recall_score(all_labels, all_preds, zero_division=0)
@@ -210,8 +187,6 @@ def evaluate_and_save():
     print(metrics_df.to_string(index=False))
     
     # 5. Визуализации
-    print("\n🎨 Генерация графиков и таблиц...")
-    
     # 5.1 Confusion Matrix (Heatmap)
     cm = confusion_matrix(all_labels, all_preds)
     plt.figure(figsize=(8, 6))
@@ -293,23 +268,6 @@ def evaluate_and_save():
         f.write(metrics_df.to_string(index=False) + "\n\n")
         f.write("CLASSIFICATION REPORT:\n")
         f.write(classification_report(all_labels, all_preds, target_names=['Real (0)', 'Fake (1)']))
-    
-    print("\n" + "="*60)
-    print("✅ ВСЕ РЕЗУЛЬТАТЫ СОХРАНЕНЫ!")
-    print(f"📂 Папка: {RESULTS_DIR}")
-    print("="*60)
-    print("\n📁 Созданные файлы:")
-    print("  📊 metrics/metrics_table.csv")
-    print("  📊 metrics/metrics_table_visual.png (таблица для диплома)")
-    print("  📊 metrics/confusion_matrix_table.png")
-    print("  📊 metrics/classification_report_table.png")
-    print("  📊 metrics/confusion_matrix.png")
-    print("  📊 metrics/roc_curve.png")
-    print("  📊 metrics/precision_recall.png")
-    print("  📊 metrics/class_distribution.png")
-    print("  📊 predictions/predictions.csv")
-    print("  📄 report.txt")
-    print("="*60)
 
 if __name__ == "__main__":
     evaluate_and_save()
