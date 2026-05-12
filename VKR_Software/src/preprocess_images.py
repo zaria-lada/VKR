@@ -1,4 +1,3 @@
-# src/preprocess_images.py
 import os
 import cv2
 import numpy as np
@@ -16,18 +15,13 @@ TARGET_SIZE = 224
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 def preprocess_dataset():
-    print(f"📂 Корень проекта: {PROJECT_ROOT}")
     if not os.path.exists(METADATA_PATH):
-        print("❌ metadata.csv не найден. Запусти сначала fix_metadata.py")
         return
 
     df = pd.read_csv(METADATA_PATH, encoding='utf-8-sig')
     processed_data = []
     skipped = 0
     no_face = 0
-
-    print(" Предобработка (Haar Cascade + ресайз 224×224)...")
-    print(f"📊 Всего файлов: {len(df)}")
 
     for _, row in tqdm(df.iterrows(), total=len(df)):
         # Загрузка через OpenCV (теперь пути на латинице, проблем не будет)
@@ -76,9 +70,6 @@ def preprocess_dataset():
     # Сохраняем метаданные обработанных файлов
     pd.DataFrame(processed_data).to_csv(OUTPUT_CSV, index=False, encoding='utf-8-sig')
     
-    print(f"\n✅ Готово! Обработано {len(processed_data)} из {len(df)} изображений.")
-    print(f"⚠️ Пропущено: {skipped} (нет лица: {no_face})")
-    print(f"📂 Результаты в: {PROCESSED_DIR}")
 
 if __name__ == "__main__":
     preprocess_dataset()
