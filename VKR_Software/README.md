@@ -73,45 +73,6 @@ python app.py
 
 Откройте браузер: http://127.0.0.1:5000
 
-## Структура проекта
-VKR/
-├── src/                          # Исходный код обучения и оценки
-│   ├── train.py                  # Скрипт обучения модели
-│   ├── evaluate_full.py          # Полная оценка метрик
-│   ├── gradcam.py                # Визуализация Grad-CAM
-│   └── split_data.py             # Разбиение датасета
-│
-├── web_app/                      # Flask веб-приложение
-│   ├── app.py                    # Основной сервер
-│   ├── templates/
-│   │   └── index.html            # HTML интерфейс
-│   └── uploads/                  # Временные загрузки
-│
-├── models/                       # Обученные модели
-│   └── final_model.pt            # Веса EfficientNet-B4 + CBAM
-│
-├── results/                      # Результаты оценки
-│   ├── metrics/                  # Графики и таблицы
-│   │   ├── confusion_matrix.png
-│   │   ├── roc_curve.png
-│   │   ├── metrics_table.csv
-│   │   └── ...
-│   ├── predictions/
-│   │   └── predictions.csv
-│   └── gradcam/                  # Визуализации внимания
-│
-├── data/                         # Датасет (не включён в репозиторий)
-│   ├── raw/                      # Исходные изображения
-│   ├── processed/                # Обработанные 224×224
-│   └── splits/                   # CSV с разбиением
-│
-├── dist/                         # Исполняемые файлы
-│   └── AIFaceDetector.exe        # Windows executable
-│
-├── requirements.txt              # Зависимости Python
-├── .gitignore                    # Игнорируемые файлы
-└── README.md                     # Этот файл
-
 ##Использование
 Web-интерфейс
 Откройте http://127.0.0.1:5000
