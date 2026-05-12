@@ -1,4 +1,3 @@
-# src/train.py
 import os
 import sys
 import pandas as pd
@@ -10,7 +9,6 @@ from torchvision import models, transforms
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-# 🔧 УНИВЕРСАЛЬНЫЙ ПОИСК КОРНЯ ПРОЕКТА
 def find_project_root():
     current = os.path.dirname(os.path.abspath(__file__))
     while True:
@@ -27,20 +25,12 @@ DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 MODELS_DIR = os.path.join(PROJECT_ROOT, 'models')
 SPLITS_DIR = os.path.join(DATA_DIR, 'splits')
 
-print(f"📍 Корень проекта: {PROJECT_ROOT}")
-print(f"📍 Данные: {DATA_DIR}")
-
 if not os.path.exists(SPLITS_DIR):
-    print(f"❌ Папка splits не найдена: {SPLITS_DIR}")
-    print("💡 Запусти сначала: python src/split_data.py")
     sys.exit(1)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f"🚀 Устройство: {device}")
 if device.type == 'cuda':
-    print(f"✅ Видеокарта: {torch.cuda.get_device_name(0)}")
 
-# --- CBAM MODULES ---
 class ChannelAttention(nn.Module):
     def __init__(self, channels, ratio=8):
         super().__init__()
@@ -74,7 +64,6 @@ class CBAM(nn.Module):
         x = self.ca(x) * x
         return self.sa(x) * x
 
-# --- ЧИСТАЯ АРХИТЕКТУРА: EfficientNet + CBAM ---
 class EfficientNetCBAM(nn.Module):
     def __init__(self, num_classes=1, pretrained=True):
         super().__init__()
@@ -84,7 +73,7 @@ class EfficientNetCBAM(nn.Module):
         )
         
         # 2. Берём только convolutional features (без классификатора)
-        self.features = backbone.features  # выход: [B, 1792, 7, 7] для 224x224 входа
+        self.features = backbone.features
         
         # 3. Добавляем CBAM
         self.cbam = CBAM(channels=1792)
@@ -103,13 +92,13 @@ class EfficientNetCBAM(nn.Module):
             param.requires_grad = False
 
     def forward(self, x):
-        x = self.features(x)      # [B, 1792, 7, 7]
-        x = self.cbam(x)           # [B, 1792, 7, 7]
-        x = self.avgpool(x)        # [B, 1792, 1, 1]
-        x = self.classifier(x)     # [B, 1]
+        x = self.features(x)    
+        x = self.cbam(x)          
+        x = self.avgpool(x)   
+        x = self.classifier(x)
         return x
 
-# --- DATASET ---
+
 class FaceDataset(Dataset):
     def __init__(self, csv_path, img_size=224):
         self.df = pd.read_csv(csv_path, encoding='utf-8-sig')
@@ -126,7 +115,6 @@ class FaceDataset(Dataset):
         if img.shape[2] == 4: img = img[:,:,:3]
         return self.transform(img), torch.tensor(row['label'], dtype=torch.float32)
 
-# --- TRAIN/VAL ---
 def train_epoch(model, loader, criterion, optimizer, device):
     model.train()
     loss, acc, total = 0.0, 0, 0
@@ -160,14 +148,10 @@ def main():
     val_ds = FaceDataset(os.path.join(SPLITS_DIR, 'val.csv'))
     train_loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_ds, batch_size=16, shuffle=False, num_workers=0)
-    print(f"✅ Загружено: Train={len(train_ds)}, Val={len(val_ds)}")
 
-    # Создаём модель с правильной архитектурой
     model = EfficientNetCBAM(num_classes=1, pretrained=True).to(device)
     criterion = nn.BCELoss()
     
-    print("\n🔹 ЭТАП 1: Training Head + CBAM (backbone frozen)...")
-    # Обучаем только CBAM и classifier
     opt = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3)
     
     best_val = float('inf')
@@ -179,8 +163,6 @@ def main():
             best_val = vl
             torch.save(model.state_dict(), os.path.join(MODELS_DIR, 'best_model.pt'))
 
-    print("\n🔓 ЭТАП 2: Fine-Tuning (unfreeze backbone)...")
-    # Размораживаем backbone для дообучения
     for param in model.features.parameters():
         param.requires_grad = True
     opt = optim.Adam(model.parameters(), lr=1e-5)
@@ -194,7 +176,6 @@ def main():
             torch.save(model.state_dict(), os.path.join(MODELS_DIR, 'best_model.pt'))
 
     torch.save(model.state_dict(), os.path.join(MODELS_DIR, 'final_model.pt'))
-    print(f"\n✅ ОБУЧЕНИЕ ЗАВЕРШЕНО. Модель: {os.path.join(MODELS_DIR, 'final_model.pt')}")
 
 if __name__ == "__main__":
     main()
