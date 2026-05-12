@@ -1,8 +1,3 @@
-# ============================================================
-# ФАЙЛ: data/generate_kandinsky.py
-# НАЗНАЧЕНИЕ: Генерация лиц через Kandinsky 2.1 (ФИНАЛЬНАЯ ВЕРСИЯ)
-# ============================================================
-
 import os
 import torch
 from PIL import Image
@@ -11,8 +6,6 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
     """Генерирует лица через Kandinsky 2.1."""
     os.makedirs(output_dir, exist_ok=True)
     
-    print("🤖 Загрузка Kandinsky 2.1...")
-    
     try:
         from diffusers import KandinskyPipeline, KandinskyPriorPipeline
         
@@ -20,7 +13,6 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
         dtype = torch.float16 if device == "cuda" else torch.float32
         
         # 1. Загружаем Prior (текст → эмбеддинги)
-        print("📥 Загрузка Prior модели...")
         prior = KandinskyPriorPipeline.from_pretrained(
             "kandinsky-community/kandinsky-2-1-prior",
             torch_dtype=dtype
@@ -28,7 +20,6 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
         prior = prior.to(device)
         
         # 2. Загружаем основную модель
-        print("📥 Загрузка основной модели...")
         pipe = KandinskyPipeline.from_pretrained(
             "kandinsky-community/kandinsky-2-1",
             torch_dtype=dtype
@@ -37,15 +28,14 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
         
         if device == "cuda":
             pipe.enable_attention_slicing()
-            print(f"✅ Модель на GPU: {torch.cuda.get_device_name(0)}")
+            print(f" Модель на GPU: {torch.cuda.get_device_name(0)}")
         
     except Exception as e:
-        print(f"❌ Ошибка загрузки: {e}")
+        print(f" Ошибка загрузки: {e}")
         return
     
-    print(f"\n🚀 Генерация {num_images} лиц...")
+    print(f"\n Генерация {num_images} лиц...")
     
-    # 🔥 КОРОТКИЕ ПРОМПТЫ (чтобы не обрезались CLIP'ом)
     prompts = [
         "person face photo, detailed skin texture",
         "headshot of a person, studio lighting"
@@ -62,11 +52,9 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
     count = 0
     
     for prompt in prompts:
-        print(f"\n📝 Промпт: {prompt[:50]}...")
+        print(f"\n Промпт: {prompt[:50]}...")
         
         try:
-            # 🔥 ШАГ 1: Генерируем эмбеддинги через Prior
-            # Используем output_type='pt' чтобы получить тензоры напрямую
             prior_out = prior(
                 prompt=prompt,
                 negative_prompt=negative_prompt,
@@ -77,9 +65,8 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
             img_embeds = prior_out.image_embeds
             neg_embeds = prior_out.negative_image_embeds
             
-            print(f"   ✅ Эмбеддинги получены: {img_embeds.shape}")
+            print(f"  Эмбеддинги получены: {img_embeds.shape}")
             
-            # 🔥 ШАГ 2: Генерируем изображение через основную модель
             for i in range(images_per_prompt):
                 try:
                     image = pipe(
@@ -101,13 +88,13 @@ def generate_kandinsky(output_dir='data/raw/kandinsky', num_images=100):
                     print(f"   ✓ {count}/{num_images}", end='\r')
                     
                 except Exception as e:
-                    print(f"\n   ⚠️ Ошибка генерации {count}: {e}")
+                    print(f"\n   Ошибка генерации {count}: {e}")
                     
         except Exception as e:
-            print(f"\n   ❌ Ошибка промпта: {e}")
+            print(f"\n   Ошибка промпта: {e}")
             continue
     
-    print(f"\n\n✅ ГОТОВО! {count} лиц сохранено в {output_dir}")
+    print(f"\n\nГОТОВО! {count} лиц сохранено в {output_dir}")
 
 if __name__ == '__main__':
     generate_kandinsky(num_images=100)
