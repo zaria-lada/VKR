@@ -1,10 +1,3 @@
-# ============================================================
-# ФАЙЛ: data/generate_sd_local.py
-# НАЗНАЧЕНИЕ: Генерация ВЫСОКОКАЧЕСТВЕННЫХ лиц через Stable Diffusion
-# ДЛЯ ВКР: Обнаружение AI-сгенерированных лиц
-# АВТОР: Жигура Евгений Геннадьевич
-# ============================================================
-
 import os
 import torch
 from PIL import Image, ImageEnhance
@@ -29,11 +22,9 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
     Генерирует высококачественные лица через локальную модель.
     """
     os.makedirs(output_dir, exist_ok=True)
+
     
-    print("🤖 Загрузка модели Realistic Vision V5.1 (высокое качество)...")
-    print("💡 Первый запуск скачает модель (~4.2 ГБ)")
-    
-    # 🔥 СПЕЦИАЛИЗИРОВАННАЯ МОДЕЛЬ ДЛЯ ФОТОРЕАЛИСТИЧНЫХ ПОРТРЕТОВ
+    # СПЕЦИАЛИЗИРОВАННАЯ МОДЕЛЬ ДЛЯ ФОТОРЕАЛИСТИЧНЫХ ПОРТРЕТОВ
     model_id = "SG161222/Realistic_Vision_V5.1_noVAE"
     
     try:
@@ -60,22 +51,21 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
         # Оптимизация памяти для GPU
         if device == "cuda":
             pipe.enable_attention_slicing()
-            print(f"✅ Модель загружена на GPU: {torch.cuda.get_device_name(0)}")
+            print(f" Модель загружена на GPU: {torch.cuda.get_device_name(0)}")
         else:
-            print("⚠️ Модель загружена на CPU (будет медленнее)")
+            print(" Модель загружена на CPU (будет медленнее)")
         
     except Exception as e:
-        print(f"❌ Ошибка загрузки модели: {e}")
-        print("💡 Проверь интернет и место на диске (~5 ГБ)")
+        print(f" Ошибка загрузки модели: {e}")
         return
     
-    print(f"\n🚀 ГЕНЕРАЦИЯ {num_images} ВЫСОКОКАЧЕСТВЕННЫХ ЛИЦ...")
+    print(f"\n ГЕНЕРАЦИЯ {num_images} ВЫСОКОКАЧЕСТВЕННЫХ ЛИЦ...")
     print("=" * 60)
     
-    # 🔥 БАЗОВЫЙ ПРОМПТ
+    # БАЗОВЫЙ ПРОМПТ
     base_prompt = "portrait of a person, photorealistic, professional photography"
     
-    # 🔥 ВАРИАЦИИ ДЕТАЛЕЙ
+    # ВАРИАЦИИ ДЕТАЛЕЙ
     details = [
         "studio lighting, sharp focus, 85mm lens, f/1.8, detailed skin texture, natural pores, realistic eyes with catchlight",
         "natural lighting, golden hour, soft shadows, detailed eyes, realistic hair strands, subsurface scattering skin",
@@ -84,7 +74,7 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
         "fashion photography, dramatic lighting, sharp details, vogue style, professional color grading, 8k",
     ]
     
-    # 🔥 НЕГАТИВНЫЙ ПРОМПТ (что НЕ должно быть)
+    # НЕГАТИВНЫЙ ПРОМПТ (что НЕ должно быть)
     negative_prompt = (
         "blurry, low quality, pixelated, distorted, deformed, ugly, bad anatomy, "
         "disfigured, poorly drawn face, mutation, mutated, extra limb, extra hands, "
@@ -95,10 +85,9 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
         "plastic skin, doll-like, wax figure, mannequin"
     )
     
-    # 🔥 НАСТРОЙКИ КАЧЕСТВА
-    NUM_STEPS = 50              # 🔥 Увеличено с 20 до 50
-    GUIDANCE_SCALE = 7.5        # 🔥 Оптимальное значение
-    RESOLUTION = 768            # 🔥 Увеличено с 512 до 768
+    NUM_STEPS = 50 
+    GUIDANCE_SCALE = 7.5
+    RESOLUTION = 768
     
     images_per_detail = num_images // len(details)
     count = 0
@@ -109,18 +98,18 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
         
         for i in range(images_per_detail):
             try:
-                # 🔥 ГЕНЕРАЦИЯ С МАКСИМАЛЬНЫМИ НАСТРОЙКАМИ
+                #  ГЕНЕРАЦИЯ С МАКСИМАЛЬНЫМИ НАСТРОЙКАМИ
                 image = pipe(
                     prompt=full_prompt,
-                    negative_prompt=negative_prompt,      # ← Убирает артефакты
-                    num_inference_steps=NUM_STEPS,        # ← 50 шагов
-                    guidance_scale=GUIDANCE_SCALE,        # ← Строгое следование промпту
-                    height=RESOLUTION,                    # ← Высокое разрешение
+                    negative_prompt=negative_prompt,     
+                    num_inference_steps=NUM_STEPS,    
+                    guidance_scale=GUIDANCE_SCALE,     
+                    height=RESOLUTION,             
                     width=RESOLUTION,
                     generator=torch.Generator(device).manual_seed(count)  # ← Воспроизводимость
                 ).images[0]
                 
-                # 🔥 ЛЁГКАЯ ПОСТ-ОБРАБОТКА
+                # ЛЁГКАЯ ПОСТ-ОБРАБОТКА
                 image = enhance_image(image, sharpness=1.15, contrast=1.08)
                 
                 # Ресайз до 512×512 для единообразия датасета
@@ -131,11 +120,10 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
                 image.save(save_path)
                 
                 count += 1
-                print(f"  ✓ {count}/{num_images}", end='\r')
+                print(f"   {count}/{num_images}", end='\r')
                 
             except torch.cuda.OutOfMemoryError:
                 # 🔥 АВТО-ФАЛЛБЭК при нехватке памяти
-                print(f"\n  ⚠️ Мало памяти, пробуем 512×512 и 35 шагов...")
                 try:
                     image = pipe(
                         prompt=full_prompt,
@@ -150,23 +138,11 @@ def generate_sd_local(output_dir='data/raw/stable_diffusion', num_images=100):
                     count += 1
                     print(f"  ✓ {count}/{num_images} (512×512)", end='\r')
                 except Exception as e2:
-                    print(f"\n  ❌ Ошибка: {e2}")
+                    print(f"\n  Ошибка: {e2}")
                     
             except Exception as e:
-                print(f"\n  ⚠️ Ошибка {count}: {e}")
+                print(f"\n  Ошибка {count}: {e}")
     
-    print("\n" + "=" * 60)
-    print(f"✅ ГОТОВО! {count} высококачественных лиц в {output_dir}")
-    print("=" * 60)
-    print("📊 Настройки:")
-    print(f"   • Модель: {model_id}")
-    print(f"   • Scheduler: DPM-Solver++")
-    print(f"   • Шаги: {NUM_STEPS}")
-    print(f"   • Guidance: {GUIDANCE_SCALE}")
-    print(f"   • Разрешение: {RESOLUTION}×{RESOLUTION} → 512×512")
-    print(f"   • Негативный промпт: ✅ 50+ запрещённых артефактов")
-    print(f"   • Пост-обработка: резкость +15%, контраст +8%")
-    print("=" * 60)
 
 if __name__ == '__main__':
     generate_sd_local(num_images=100)
